@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Infographic Generator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">YT Infographic</div>
+    <div class="nav-links">
+      <a href="#">Home</a>
+      <a href="#">About</a>
+    </div>
+  </nav>
+
+  <main class="hero">
+    <h1>Turn any YouTube video into a <span class="highlight">visual infographic</span></h1>
+    <p class="subtitle">Paste a YouTube link and let our AI agent generate a clean, shareable infographic for you.</p>
+
+    <div class="search-bar">
+      <input type="text" id="youtube-url" placeholder="Paste a YouTube link here..." />
+      <button id="generate-btn">Generate</button>
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <div id="result" class="result hidden">
+      <h2>Transcript</h2>
+      <div id="transcript-text" class="transcript-text"></div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+
+  <footer class="footer">
+    <p>Built with AI</p>
+  </footer>
+</body>
+</html>
