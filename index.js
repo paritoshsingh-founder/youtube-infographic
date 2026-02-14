@@ -75,6 +75,15 @@ function extractVideoId(url) {
   return null;
 }
 
+app.get("/api/check", (req, res) => {
+  const key = process.env.GEMINI_API_KEY || "";
+  res.json({
+    keySet: !!key,
+    keyPrefix: key.substring(0, 10) + "...",
+    keyLength: key.length,
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
