@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "build": "pip install youtube-transcript-api"
+    "build": "pip3 install youtube-transcript-api"
   },
   "keywords": [],
   "author": "",

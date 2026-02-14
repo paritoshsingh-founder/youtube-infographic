@@ -25,7 +25,9 @@ app.post("/api/transcript", async (req, res) => {
 
   const scriptPath = path.join(__dirname, "fetch_transcript.py");
 
-  execFile("python", [scriptPath, videoId], { timeout: 30000 }, (err, stdout, stderr) => {
+  const pythonCmd = process.platform === "win32" ? "python" : "python3";
+
+  execFile(pythonCmd, [scriptPath, videoId], { timeout: 30000 }, (err, stdout, stderr) => {
     if (err) {
       console.error("Transcript error:", stderr || err.message);
       return res.status(500).json({ error: "Could not fetch transcript. The video may not have captions." });
