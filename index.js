@@ -1,7 +1,6 @@
 require("dotenv").config();
 const express = require("express");
 const path = require("path");
-const { execFile } = require("child_process");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
@@ -11,7 +10,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-app.post("/api/transcript", async (req, res) => {
+app.post("/api/generate", async (req, res) => {
   const { url } = req.body;
 
   if (!url) {
@@ -23,48 +22,10 @@ app.post("/api/transcript", async (req, res) => {
     return res.status(400).json({ error: "Invalid YouTube URL" });
   }
 
-  const scriptPath = path.join(__dirname, "fetch_transcript.py");
-
-  const pythonCmd = process.platform === "win32" ? "python" : "python3";
-
-  execFile(pythonCmd, [scriptPath, videoId], { timeout: 30000 }, (err, stdout, stderr) => {
-    if (err) {
-      console.error("Transcript error:", err.message);
-      console.error("stderr:", stderr);
-      console.error("stdout:", stdout);
-      // Try to parse the error from Python's stdout (exit code 1 still triggers err)
-      try {
-        const data = JSON.parse(stdout);
-        if (data.error) {
-          return res.status(500).json({ error: data.error });
-        }
-      } catch {}
-      return res.status(500).json({ error: stderr || err.message || "Could not fetch transcript." });
-    }
-
-    try {
-      const data = JSON.parse(stdout);
-      if (data.error) {
-        return res.status(500).json({ error: data.error });
-      }
-      res.json({ videoId, transcript: data.transcript, segments: data.segments });
-    } catch {
-      res.status(500).json({ error: "Failed to parse transcript data." });
-    }
-  });
-});
-
-app.post("/api/summarize", async (req, res) => {
-  const { transcript } = req.body;
-
-  if (!transcript) {
-    return res.status(400).json({ error: "Transcript is required" });
-  }
-
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    const prompt = `You are an expert content summarizer. Given the following YouTube video transcript, create a structured infographic-style summary. Return the response in this exact JSON format:
+    const prompt = `You are an expert content summarizer. Watch this YouTube video and create a structured infographic-style summary. Return the response in this exact JSON format:
 
 {
   "title": "A short catchy title for the video",
@@ -74,15 +35,19 @@ app.post("/api/summarize", async (req, res) => {
   "takeaway": "The single most important takeaway from this video"
 }
 
-Only return valid JSON, nothing else.
+Only return valid JSON, nothing else.`;
 
-Transcript:
-${transcript}`;
+    const result = await model.generateContent([
+      {
+        fileData: {
+          fileUri: `https://www.youtube.com/watch?v=${videoId}`,
+        },
+      },
+      { text: prompt },
+    ]);
 
-    const result = await model.generateContent(prompt);
     const text = result.response.text();
 
-    // Parse the JSON from Gemini's response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return res.status(500).json({ error: "Failed to parse AI response." });
@@ -92,7 +57,7 @@ ${transcript}`;
     res.json(summary);
   } catch (err) {
     console.error("Gemini error:", err.message);
-    res.status(500).json({ error: "AI summarization failed. Please try again." });
+    res.status(500).json({ error: "AI generation failed. Please try again." });
   }
 });
 
@@ -109,30 +74,6 @@ function extractVideoId(url) {
   }
   return null;
 }
-
-app.get("/api/debug", (req, res) => {
-  const { execSync } = require("child_process");
-  const pythonCmd = process.platform === "win32" ? "python" : "python3";
-  const results = {};
-  try {
-    results.pythonVersion = execSync(`${pythonCmd} --version 2>&1`).toString().trim();
-  } catch (e) {
-    results.pythonVersion = "NOT FOUND: " + e.message;
-  }
-  try {
-    results.importTest = execSync(`${pythonCmd} -c "import sys; sys.path.insert(0,'python_libs'); from youtube_transcript_api import YouTubeTranscriptApi; print('OK')" 2>&1`).toString().trim();
-  } catch (e) {
-    results.importTest = "FAILED: " + e.message;
-  }
-  try {
-    results.pythonLibsExists = require("fs").existsSync(path.join(__dirname, "python_libs"));
-  } catch (e) {
-    results.pythonLibsExists = false;
-  }
-  results.platform = process.platform;
-  results.geminiKeySet = !!process.env.GEMINI_API_KEY;
-  res.json(results);
-});
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

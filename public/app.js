@@ -1,8 +1,6 @@
 const urlInput = document.getElementById("youtube-url");
 const generateBtn = document.getElementById("generate-btn");
 const statusEl = document.getElementById("status");
-const resultEl = document.getElementById("result");
-const transcriptText = document.getElementById("transcript-text");
 const infographicEl = document.getElementById("infographic");
 
 generateBtn.addEventListener("click", generate);
@@ -17,49 +15,26 @@ async function generate() {
     return;
   }
 
-  showStatus("Fetching transcript...", "loading");
+  showStatus("Analyzing video with AI...", "loading");
   infographicEl.classList.add("hidden");
-  resultEl.classList.add("hidden");
   generateBtn.disabled = true;
-  generateBtn.textContent = "Loading...";
+  generateBtn.textContent = "Generating...";
 
   try {
-    // Step 1: Fetch transcript
-    const transcriptRes = await fetch("/api/transcript", {
+    const res = await fetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url }),
     });
 
-    const transcriptData = await transcriptRes.json();
+    const data = await res.json();
 
-    if (!transcriptRes.ok) {
-      showStatus(transcriptData.error, "error");
+    if (!res.ok) {
+      showStatus(data.error, "error");
       return;
     }
 
-    // Show transcript
-    transcriptText.textContent = transcriptData.transcript;
-    resultEl.classList.remove("hidden");
-
-    // Step 2: Summarize with Gemini
-    showStatus("Generating infographic with AI...", "loading");
-
-    const summaryRes = await fetch("/api/summarize", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transcript: transcriptData.transcript }),
-    });
-
-    const summaryData = await summaryRes.json();
-
-    if (!summaryRes.ok) {
-      showStatus(summaryData.error, "error");
-      return;
-    }
-
-    // Render infographic
-    renderInfographic(summaryData);
+    renderInfographic(data);
     showStatus("Infographic generated!", "success");
   } catch (err) {
     showStatus("Something went wrong. Please try again.", "error");
