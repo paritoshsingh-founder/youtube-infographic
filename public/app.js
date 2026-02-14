@@ -3,13 +3,14 @@ const generateBtn = document.getElementById("generate-btn");
 const statusEl = document.getElementById("status");
 const resultEl = document.getElementById("result");
 const transcriptText = document.getElementById("transcript-text");
+const infographicEl = document.getElementById("infographic");
 
-generateBtn.addEventListener("click", fetchTranscript);
+generateBtn.addEventListener("click", generate);
 urlInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") fetchTranscript();
+  if (e.key === "Enter") generate();
 });
 
-async function fetchTranscript() {
+async function generate() {
   const url = urlInput.value.trim();
   if (!url) {
     showStatus("Please paste a YouTube link.", "error");
@@ -17,33 +18,80 @@ async function fetchTranscript() {
   }
 
   showStatus("Fetching transcript...", "loading");
+  infographicEl.classList.add("hidden");
   resultEl.classList.add("hidden");
   generateBtn.disabled = true;
   generateBtn.textContent = "Loading...";
 
   try {
-    const res = await fetch("/api/transcript", {
+    // Step 1: Fetch transcript
+    const transcriptRes = await fetch("/api/transcript", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url }),
     });
 
-    const data = await res.json();
+    const transcriptData = await transcriptRes.json();
 
-    if (!res.ok) {
-      showStatus(data.error, "error");
+    if (!transcriptRes.ok) {
+      showStatus(transcriptData.error, "error");
       return;
     }
 
-    showStatus(`Transcript fetched (${data.segments.length} segments)`, "success");
-    transcriptText.textContent = data.transcript;
+    // Show transcript
+    transcriptText.textContent = transcriptData.transcript;
     resultEl.classList.remove("hidden");
+
+    // Step 2: Summarize with Gemini
+    showStatus("Generating infographic with AI...", "loading");
+
+    const summaryRes = await fetch("/api/summarize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transcript: transcriptData.transcript }),
+    });
+
+    const summaryData = await summaryRes.json();
+
+    if (!summaryRes.ok) {
+      showStatus(summaryData.error, "error");
+      return;
+    }
+
+    // Render infographic
+    renderInfographic(summaryData);
+    showStatus("Infographic generated!", "success");
   } catch (err) {
     showStatus("Something went wrong. Please try again.", "error");
   } finally {
     generateBtn.disabled = false;
     generateBtn.textContent = "Generate";
   }
+}
+
+function renderInfographic(data) {
+  document.getElementById("info-title").textContent = data.title;
+  document.getElementById("info-summary").textContent = data.summary;
+
+  const keypointsList = document.getElementById("info-keypoints");
+  keypointsList.innerHTML = "";
+  data.keyPoints.forEach((point) => {
+    const li = document.createElement("li");
+    li.textContent = point;
+    keypointsList.appendChild(li);
+  });
+
+  const topicsContainer = document.getElementById("info-topics");
+  topicsContainer.innerHTML = "";
+  data.topics.forEach((topic) => {
+    const span = document.createElement("span");
+    span.className = "topic-tag";
+    span.textContent = topic;
+    topicsContainer.appendChild(span);
+  });
+
+  document.getElementById("info-takeaway").textContent = data.takeaway;
+  infographicEl.classList.remove("hidden");
 }
 
 function showStatus(message, type) {
