@@ -32,7 +32,14 @@ app.post("/api/transcript", async (req, res) => {
       console.error("Transcript error:", err.message);
       console.error("stderr:", stderr);
       console.error("stdout:", stdout);
-      return res.status(500).json({ error: "Could not fetch transcript. The video may not have captions." });
+      // Try to parse the error from Python's stdout (exit code 1 still triggers err)
+      try {
+        const data = JSON.parse(stdout);
+        if (data.error) {
+          return res.status(500).json({ error: data.error });
+        }
+      } catch {}
+      return res.status(500).json({ error: stderr || err.message || "Could not fetch transcript." });
     }
 
     try {

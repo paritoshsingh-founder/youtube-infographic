@@ -22,5 +22,5 @@ try:
     full_text = " ".join(s["text"] for s in segments)
     print(json.dumps({"transcript": full_text, "segments": segments}))
 except Exception as e:
-    print(json.dumps({"error": str(e)}))
+    print(json.dumps({"error": f"{type(e).__name__}: {str(e)}"}))
     sys.exit(1)
