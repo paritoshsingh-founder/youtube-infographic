@@ -29,7 +29,9 @@ app.post("/api/transcript", async (req, res) => {
 
   execFile(pythonCmd, [scriptPath, videoId], { timeout: 30000 }, (err, stdout, stderr) => {
     if (err) {
-      console.error("Transcript error:", stderr || err.message);
+      console.error("Transcript error:", err.message);
+      console.error("stderr:", stderr);
+      console.error("stdout:", stdout);
       return res.status(500).json({ error: "Could not fetch transcript. The video may not have captions." });
     }
 
@@ -100,6 +102,30 @@ function extractVideoId(url) {
   }
   return null;
 }
+
+app.get("/api/debug", (req, res) => {
+  const { execSync } = require("child_process");
+  const pythonCmd = process.platform === "win32" ? "python" : "python3";
+  const results = {};
+  try {
+    results.pythonVersion = execSync(`${pythonCmd} --version 2>&1`).toString().trim();
+  } catch (e) {
+    results.pythonVersion = "NOT FOUND: " + e.message;
+  }
+  try {
+    results.importTest = execSync(`${pythonCmd} -c "import sys; sys.path.insert(0,'python_libs'); from youtube_transcript_api import YouTubeTranscriptApi; print('OK')" 2>&1`).toString().trim();
+  } catch (e) {
+    results.importTest = "FAILED: " + e.message;
+  }
+  try {
+    results.pythonLibsExists = require("fs").existsSync(path.join(__dirname, "python_libs"));
+  } catch (e) {
+    results.pythonLibsExists = false;
+  }
+  results.platform = process.platform;
+  results.geminiKeySet = !!process.env.GEMINI_API_KEY;
+  res.json(results);
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
