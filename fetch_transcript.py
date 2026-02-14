@@ -1,5 +1,10 @@
 import sys
+import os
 import json
+
+# Add local python_libs to path for Render deployment
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "python_libs"))
+
 from youtube_transcript_api import YouTubeTranscriptApi
 
 video_id = sys.argv[1]

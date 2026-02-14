@@ -2,7 +2,7 @@ services:
   - type: web
     name: youtube-infographic
     runtime: node
-    buildCommand: npm install && pip3 install youtube-transcript-api
+    buildCommand: npm install && pip3 install --target=./python_libs youtube-transcript-api
     startCommand: node index.js
     envVars:
       - key: GEMINI_API_KEY
